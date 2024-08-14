@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -56,7 +57,7 @@ func (dc *DribbleClient) upsertNewLock(ctx context.Context,
 	//if err != nil {
 	//	return nil, err
 	//}
-
+	log.Printf("putting %v", item)
 	req := &dynamodb.PutItemInput{
 		Item:      item,
 		TableName: aws.String(dc.TableName),
