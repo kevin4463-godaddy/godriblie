@@ -87,8 +87,7 @@ func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error
 	input := &dynamodb.GetItemInput{
 		TableName: aws.String(dc.TableName),
 		Key: map[string]types.AttributeValue{
-			"key":   &types.AttributeValueMemberS{Value: lockName},
-			"owner": &types.AttributeValueMemberS{Value: dc.OwnerName},
+			"key": &types.AttributeValueMemberS{Value: lockName},
 		},
 	}
 
@@ -110,8 +109,7 @@ func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error
 		updateInput := &dynamodb.UpdateItemInput{
 			TableName: aws.String(dc.TableName),
 			Key: map[string]types.AttributeValue{
-				"key":   &types.AttributeValueMemberS{Value: lockName},
-				"owner": &types.AttributeValueMemberS{Value: dc.OwnerName},
+				"key": &types.AttributeValueMemberS{Value: lockName},
 			},
 			UpdateExpression:    aws.String("SET #ts = :timestamp, isReleased = :isReleased"),
 			ConditionExpression: aws.String("owner = :owner"),
@@ -139,8 +137,7 @@ func (dc *DribbleClient) DeleteOnReleaseLock(ctx context.Context, lockName strin
 	deleteInput := &dynamodb.DeleteItemInput{
 		TableName: aws.String(dc.TableName),
 		Key: map[string]types.AttributeValue{
-			"key":   &types.AttributeValueMemberS{Value: lockName},
-			"owner": &types.AttributeValueMemberS{Value: dc.OwnerName},
+			"key": &types.AttributeValueMemberS{Value: lockName},
 		},
 		ConditionExpression: aws.String("owner = :owner"),
 		ExpressionAttributeValues: map[string]types.AttributeValue{
