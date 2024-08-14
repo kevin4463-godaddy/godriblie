@@ -22,7 +22,7 @@ func (dc *DribbleClient) AcquireLock(ctx context.Context, lockName string, delet
 		return err
 	}
 
-	item := Lock{
+	item := utils.LockDto{
 		PartitionKey:    lockName,
 		Owner:           dc.OwnerName,
 		Timestamp:       now,

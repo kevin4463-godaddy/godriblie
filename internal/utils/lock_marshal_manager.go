@@ -6,10 +6,9 @@ import (
 	"strconv"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/kevin4463-godaddy/godriblie"
 )
 
-func MarshalLockItem(item godriblie.Lock) (map[string]types.AttributeValue, error) {
+func MarshalLockItem(item LockDto) (map[string]types.AttributeValue, error) {
 	data, err := json.Marshal(item.Data)
 	if err != nil {
 		return nil, err
@@ -28,14 +27,14 @@ func MarshalLockItem(item godriblie.Lock) (map[string]types.AttributeValue, erro
 	return av, nil
 }
 
-func UnmarshalLockItem(item map[string]types.AttributeValue) (godriblie.Lock, error) {
+func UnmarshalLockItem(item map[string]types.AttributeValue) (LockDto, error) {
 	timestamp, err := strconv.ParseInt(item["Timestamp"].(*types.AttributeValueMemberN).Value, 10, 64)
 	if err != nil {
-		return godriblie.Lock{}, err
+		return LockDto{}, err
 	}
 	expTime, err := strconv.ParseInt(item["ExpTime"].(*types.AttributeValueMemberN).Value, 10, 64)
 	if err != nil {
-		return godriblie.Lock{}, err
+		return LockDto{}, err
 	}
 	deleteOnRelease := item["DeleteOnRelease"].(*types.AttributeValueMemberBOOL).Value
 	isReleased := item["IsReleased"].(*types.AttributeValueMemberBOOL).Value
@@ -43,7 +42,7 @@ func UnmarshalLockItem(item map[string]types.AttributeValue) (godriblie.Lock, er
 	partitionKey := item["LockName"].(*types.AttributeValueMemberS).Value
 	owner := item["Owner"].(*types.AttributeValueMemberS).Value
 
-	result := godriblie.Lock{
+	result := LockDto{
 		PartitionKey:    partitionKey,
 		Owner:           owner,
 		Timestamp:       timestamp,

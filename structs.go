@@ -1,5 +1,7 @@
 package godriblie
 
+import "github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+
 const (
 	defaultPartitionKeyName = "key"
 )
@@ -13,13 +15,13 @@ type DribbleClient struct {
 
 type DribbleClientOption func(*DribbleClient)
 
-type Lock struct {
-	PartitionKey    string
-	Owner           string
-	Timestamp       int64
-	ExpTime         int64
-	DeleteOnRelease bool
-	IsReleased      bool
-	Data            string
-	//AdditionalAttributes map[string]types.AttributeValue
+type createDynamoDBTableOptions struct {
+	billingMode           types.BillingMode
+	provisionedThroughput *types.ProvisionedThroughput
+	tableName             string
+	partitionKeyName      string
+	sortKeyName           string
+	tags                  []types.Tag
 }
+
+type CreateTableOption func(*createDynamoDBTableOptions)
