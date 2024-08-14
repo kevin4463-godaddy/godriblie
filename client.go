@@ -33,6 +33,7 @@ func (dc *DribbleClient) CreateTable(ctx context.Context, tableName string, opts
 	for _, opt := range opts {
 		opt(createTableOptions)
 	}
+
 	return dc.createTable(ctx, createTableOptions)
 }
 

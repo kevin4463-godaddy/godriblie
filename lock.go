@@ -33,7 +33,7 @@ func (dc *DribbleClient) acquireLock(ctx context.Context, opt *acquireLockOption
 		ExpTime:         30 * 24 * 60 * 60,
 		DeleteOnRelease: opt.DeleteOnRelease,
 		IsReleased:      false,
-		Data:            string(opt.Data),
+		Data:            opt.Data,
 	}
 
 	item, err := utils.MarshalLockItem(lockOptions)
@@ -186,5 +186,5 @@ func (dc *DribbleClient) CheckLock(ctx context.Context, lockName string) (bool, 
 		return false, "", err
 	}
 
-	return lockItem.IsReleased, lockItem.Data, nil
+	return lockItem.IsReleased, string(lockItem.Data), nil
 }

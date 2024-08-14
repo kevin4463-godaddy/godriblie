@@ -7,5 +7,5 @@ type LockDto struct {
 	ExpTime         int64
 	DeleteOnRelease bool
 	IsReleased      bool
-	Data            string
+	Data            []byte
 }
