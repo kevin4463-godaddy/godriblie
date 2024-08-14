@@ -111,15 +111,13 @@ func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error
 			Key: map[string]types.AttributeValue{
 				"key": &types.AttributeValueMemberS{Value: lockName},
 			},
-			UpdateExpression:    aws.String("SET #ts = :timestamp, isReleased = :isReleased"),
-			ConditionExpression: aws.String("owner = :owner"),
+			UpdateExpression: aws.String("SET #ts = :timestamp, isReleased = :isReleased"),
 			ExpressionAttributeNames: map[string]string{
 				"#ts": "timestamp",
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
 				":timestamp":  &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", time.Now().Unix())},
 				":isReleased": &types.AttributeValueMemberBOOL{Value: true},
-				":owner":      &types.AttributeValueMemberS{Value: dc.OwnerName},
 			},
 		}
 		_, err = dc.DynamoDB.UpdateItem(ctx, updateInput)
