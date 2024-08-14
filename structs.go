@@ -7,7 +7,7 @@ import (
 
 const (
 	attrData                = "data"
-	attrOwnerName           = "ownerName"
+	attrOwnerName           = "owner"
 	attrIsReleased          = "isReleased"
 	defaultPartitionKeyName = "key"
 )
