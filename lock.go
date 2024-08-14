@@ -137,10 +137,6 @@ func (dc *DribbleClient) DeleteOnReleaseLock(ctx context.Context, lockName strin
 		Key: map[string]types.AttributeValue{
 			"key": &types.AttributeValueMemberS{Value: lockName},
 		},
-		ConditionExpression: aws.String("owner = :owner"),
-		ExpressionAttributeValues: map[string]types.AttributeValue{
-			":owner": &types.AttributeValueMemberS{Value: dc.OwnerName},
-		},
 	}
 
 	_, err := dc.DynamoDB.DeleteItem(ctx, deleteInput)
