@@ -15,6 +15,7 @@ func MarshalLockItem(item LockDto) (map[string]types.AttributeValue, error) {
 	}
 
 	av := map[string]types.AttributeValue{
+		"key":             &types.AttributeValueMemberS{Value: item.PartitionKey},
 		"LockName":        &types.AttributeValueMemberS{Value: item.PartitionKey},
 		"Owner":           &types.AttributeValueMemberS{Value: item.Owner},
 		"Timestamp":       &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", item.Timestamp)},

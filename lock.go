@@ -2,57 +2,92 @@ package godriblie
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/kevin4463-godaddy/godriblie/internal/utils"
 )
 
-func (dc *DribbleClient) AcquireLock(ctx context.Context, lockName string, deleteOnRelease bool, data interface{}) error {
-	now := time.Now().Unix()
-	ttl := 30 * 24 * 60 * 60
-
-	dataStr, err := json.Marshal(data)
-	if err != nil {
-		return err
+func (dc *DribbleClient) AcquireLock(ctx context.Context, pKey string, opts ...AcquireLockOption) (*utils.LockDto, error) {
+	lockReq := &acquireLockOptions{
+		PartitionKey: pKey,
 	}
 
-	item := utils.LockDto{
-		PartitionKey:    lockName,
+	for _, opt := range opts {
+		opt(lockReq)
+	}
+
+	return dc.acquireLock(ctx, lockReq)
+}
+
+func (dc *DribbleClient) acquireLock(ctx context.Context, opt *acquireLockOptions) (*utils.LockDto, error) {
+	lockOptions := utils.LockDto{
+		PartitionKey:    opt.PartitionKey,
 		Owner:           dc.OwnerName,
-		Timestamp:       now,
-		ExpTime:         now + int64(ttl),
-		DeleteOnRelease: deleteOnRelease,
+		Timestamp:       time.Now().Unix(),
+		ExpTime:         30 * 24 * 60 * 60,
+		DeleteOnRelease: opt.DeleteOnRelease,
 		IsReleased:      false,
-		Data:            string(dataStr),
+		Data:            string(opt.Data),
 	}
 
-	av, err := utils.MarshalLockItem(item)
+	item, err := utils.MarshalLockItem(lockOptions)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	input := &dynamodb.PutItemInput{
-		Item:                av,
-		TableName:           aws.String(dc.TableName),
-		ConditionExpression: aws.String("attribute_not_exists(PartitionKey)"),
-	}
+	return dc.upsertNewLock(ctx, opt.AdditionalAttributes, opt.PartitionKey, opt.DeleteOnRelease, opt.Data, item)
+}
 
-	_, err = dc.DynamoDB.PutItem(ctx, input)
+func (dc *DribbleClient) upsertNewLock(ctx context.Context,
+	additionalAttributes map[string]types.AttributeValue,
+	key string,
+	deleteLockOnRelease bool,
+	newLockData []byte,
+	item map[string]types.AttributeValue) (*utils.LockDto, error) {
+
+	cond := expression.Or(
+		expression.AttributeExists(expression.Name(dc.PartitionKeyName)),
+		expression.And(
+			expression.AttributeExists(expression.Name(dc.PartitionKeyName)),
+			expression.Equal(isReleasedAttr, isReleasedAttrValue)))
+
+	putItemXpress, err := expression.NewBuilder().WithCondition(cond).Build()
 	if err != nil {
-		var cfe *types.ConditionalCheckFailedException
-		if errors.As(err, &cfe) {
-			return errors.New("lock is already help by another owner")
-		}
-		return fmt.Errorf("fialed to acquire lock: %v", err)
+		return nil, err
 	}
 
-	return nil
+	req := &dynamodb.PutItemInput{
+		Item:                      item,
+		TableName:                 aws.String(dc.TableName),
+		ConditionExpression:       putItemXpress.Condition(),
+		ExpressionAttributeNames:  putItemXpress.Names(),
+		ExpressionAttributeValues: putItemXpress.Values(),
+	}
+
+	// log something here
+	return dc.putLockItem(ctx, key, req)
+}
+
+func (dc *DribbleClient) putLockItem(ctx context.Context,
+	key string,
+	putItemRequest *dynamodb.PutItemInput) (*utils.LockDto, error) {
+
+	_, err := dc.DynamoDB.PutItem(ctx, putItemRequest)
+	if err != nil {
+		return nil, err
+	}
+
+	response := &utils.LockDto{
+		PartitionKey: key,
+	}
+
+	return response, nil
 }
 
 func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error {
