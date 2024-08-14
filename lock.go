@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/expression"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/kevin4463-godaddy/godriblie/internal/utils"
@@ -51,19 +51,16 @@ func (dc *DribbleClient) upsertNewLock(ctx context.Context,
 	newLockData []byte,
 	item map[string]types.AttributeValue) (*utils.LockDto, error) {
 
-	cond := expression.AttributeExists(expression.Name(dc.PartitionKeyName))
+	//cond := expression.AttributeExists(expression.Name(dc.PartitionKeyName))
 
-	putItemXpress, err := expression.NewBuilder().WithCondition(cond).Build()
-	if err != nil {
-		return nil, err
-	}
-
+	//putItemXpress, err := expression.NewBuilder().WithCondition(cond).Build()
+	//if err != nil {
+	//	return nil, err
+	//}
+	log.Printf("putting %v", item)
 	req := &dynamodb.PutItemInput{
-		Item:                      item,
-		TableName:                 aws.String(dc.TableName),
-		ConditionExpression:       putItemXpress.Condition(),
-		ExpressionAttributeNames:  putItemXpress.Names(),
-		ExpressionAttributeValues: putItemXpress.Values(),
+		Item:      item,
+		TableName: aws.String(dc.TableName),
 	}
 
 	// log something here
