@@ -44,6 +44,19 @@ func (dc *DribbleClient) CreateTable(ctx context.Context, tableName string, opts
 	return dc.createTable(ctx, createTableOptions)
 }
 
+func WithCustomPartitionKeyName(s string) CreateTableOption {
+	return func(opt *createDynamoDBTableOptions) {
+		opt.partitionKeyName = s
+	}
+}
+
+func WithProvisionedThroughput(provisionedThroughput *types.ProvisionedThroughput) CreateTableOption {
+	return func(opt *createDynamoDBTableOptions) {
+		opt.billingMode = types.BillingModeProvisioned
+		opt.provisionedThroughput = provisionedThroughput
+	}
+}
+
 func (dc *DribbleClient) createTable(ctx context.Context, opt *createDynamoDBTableOptions) (*dynamodb.CreateTableOutput, error) {
 	keySchema := []types.KeySchemaElement{
 		{
@@ -64,6 +77,10 @@ func (dc *DribbleClient) createTable(ctx context.Context, opt *createDynamoDBTab
 		KeySchema:            keySchema,
 		BillingMode:          opt.billingMode,
 		AttributeDefinitions: attributeDefinitions,
+	}
+
+	if opt.provisionedThroughput != nil {
+		createTableInput.ProvisionedThroughput = opt.provisionedThroughput
 	}
 
 	return dc.DynamoDB.CreateTable(ctx, createTableInput)
