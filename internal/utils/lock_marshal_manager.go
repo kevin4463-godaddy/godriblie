@@ -34,7 +34,7 @@ func UnmarshalLockItem(item map[string]types.AttributeValue) (LockDto, error) {
 	isReleased := item["isReleased"].(*types.AttributeValueMemberBOOL).Value
 	data := item["data"].(*types.AttributeValueMemberS).Value
 	partitionKey := item["key"].(*types.AttributeValueMemberS).Value
-	owner := item["wwner"].(*types.AttributeValueMemberS).Value
+	owner := item["owner"].(*types.AttributeValueMemberS).Value
 
 	result := LockDto{
 		PartitionKey:    partitionKey,
