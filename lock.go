@@ -158,10 +158,10 @@ func (dc *DribbleClient) DeleteOnReleaseLock(ctx context.Context, lockName strin
 
 func (dc *DribbleClient) CheckLock(ctx context.Context, lockName string) (bool, string, error) {
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(dc.TableName),
+		ConsistentRead: aws.Bool(true),
+		TableName:      aws.String(dc.TableName),
 		Key: map[string]types.AttributeValue{
-			"key":   &types.AttributeValueMemberS{Value: lockName},
-			"owner": &types.AttributeValueMemberS{Value: dc.OwnerName},
+			"key": &types.AttributeValueMemberS{Value: lockName},
 		},
 	}
 
