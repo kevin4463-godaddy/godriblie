@@ -6,13 +6,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
-	"github.com/kevin4463-godaddy/godriblie/internal/utils"
 )
 
 func NewLockClient(dynamoDb DynamoDbProvider, table string, opts ...DribbleClientOption) *DribbleClient {
 	client := &DribbleClient{
 		TableName:        table,
-		OwnerName:        utils.GenerateRandString(),
+		OwnerName:        "default:owneroflock",
 		PartitionKeyName: defaultPartitionKeyName,
 		DynamoDB:         dynamoDb,
 	}
