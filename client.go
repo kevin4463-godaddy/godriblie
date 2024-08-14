@@ -6,12 +6,13 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"github.com/google/uuid"
 )
 
 func NewLockClient(dynamoDb DynamoDbProvider, table string, opts ...DribbleClientOption) *DribbleClient {
 	client := &DribbleClient{
 		TableName:        table,
-		OwnerName:        "default:owneroflock",
+		OwnerName:        uuid.New().String(),
 		PartitionKeyName: defaultPartitionKeyName,
 		DynamoDB:         dynamoDb,
 	}
@@ -21,14 +22,6 @@ func NewLockClient(dynamoDb DynamoDbProvider, table string, opts ...DribbleClien
 	}
 
 	return client
-}
-
-func WithPartitionKeyName(pkn string) DribbleClientOption {
-	return func(dc *DribbleClient) { dc.PartitionKeyName = pkn }
-}
-
-func WithOwnerName(name string) DribbleClientOption {
-	return func(dc *DribbleClient) { dc.OwnerName = name }
 }
 
 func (dc *DribbleClient) CreateTable(ctx context.Context, tableName string, opts ...CreateTableOption) (*dynamodb.CreateTableOutput, error) {
@@ -41,19 +34,6 @@ func (dc *DribbleClient) CreateTable(ctx context.Context, tableName string, opts
 		opt(createTableOptions)
 	}
 	return dc.createTable(ctx, createTableOptions)
-}
-
-func WithCustomPartitionKeyName(s string) CreateTableOption {
-	return func(opt *createDynamoDBTableOptions) {
-		opt.partitionKeyName = s
-	}
-}
-
-func WithProvisionedThroughput(provisionedThroughput *types.ProvisionedThroughput) CreateTableOption {
-	return func(opt *createDynamoDBTableOptions) {
-		opt.billingMode = types.BillingModeProvisioned
-		opt.provisionedThroughput = provisionedThroughput
-	}
 }
 
 func (dc *DribbleClient) createTable(ctx context.Context, opt *createDynamoDBTableOptions) (*dynamodb.CreateTableOutput, error) {
