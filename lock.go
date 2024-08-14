@@ -51,11 +51,7 @@ func (dc *DribbleClient) upsertNewLock(ctx context.Context,
 	newLockData []byte,
 	item map[string]types.AttributeValue) (*utils.LockDto, error) {
 
-	cond := expression.Or(
-		expression.AttributeExists(expression.Name(dc.PartitionKeyName)),
-		expression.And(
-			expression.AttributeExists(expression.Name(dc.PartitionKeyName)),
-			expression.Equal(isReleasedAttr, isReleasedAttrValue)))
+	cond := expression.AttributeExists(expression.Name(dc.PartitionKeyName))
 
 	putItemXpress, err := expression.NewBuilder().WithCondition(cond).Build()
 	if err != nil {
