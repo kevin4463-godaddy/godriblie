@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"log"
 	"time"
 
@@ -14,6 +15,12 @@ import (
 )
 
 func (dc *DribbleClient) AcquireLock(ctx context.Context, pKey string, opts ...AcquireLockOption) (*utils.LockDto, error) {
+
+	err := dc.validateLock(ctx, pKey)
+	if err != nil {
+		return nil, err
+	}
+
 	lockReq := &acquireLockOptions{
 		PartitionKey: pKey,
 	}
@@ -41,40 +48,17 @@ func (dc *DribbleClient) acquireLock(ctx context.Context, opt *acquireLockOption
 		return nil, err
 	}
 
-	return dc.upsertNewLock(ctx, opt.AdditionalAttributes, opt.PartitionKey, opt.DeleteOnRelease, opt.Data, item)
-}
-
-func (dc *DribbleClient) upsertNewLock(ctx context.Context,
-	additionalAttributes map[string]types.AttributeValue,
-	key string,
-	deleteLockOnRelease bool,
-	newLockData []byte,
-	item map[string]types.AttributeValue) (*utils.LockDto, error) {
-
-	//cond := expression.AttributeExists(expression.Name(dc.PartitionKeyName))
-
-	//putItemXpress, err := expression.NewBuilder().WithCondition(cond).Build()
-	//if err != nil {
-	//	return nil, err
-	//}
-	log.Printf("putting %v", item)
 	req := &dynamodb.PutItemInput{
 		Item:      item,
 		TableName: aws.String(dc.TableName),
 	}
 
-	// log something here
-
-	_, err := dc.DynamoDB.PutItem(ctx, req)
+	_, err = dc.DynamoDB.PutItem(ctx, req)
 	if err != nil {
 		return nil, err
 	}
 
-	response := &utils.LockDto{
-		PartitionKey: key,
-	}
-
-	return response, nil
+	return &lockOptions, nil
 }
 
 func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error {
@@ -99,6 +83,7 @@ func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error
 		return err
 	}
 
+	// only release/delete if client is current owner
 	if !lockItem.DeleteOnRelease {
 		updateInput := &dynamodb.UpdateItemInput{
 			TableName: aws.String(dc.TableName),
@@ -107,12 +92,15 @@ func (dc *DribbleClient) ReleaseLock(ctx context.Context, lockName string) error
 			},
 			UpdateExpression: aws.String("SET #ts = :timestamp, isReleased = :isReleased"),
 			ExpressionAttributeNames: map[string]string{
-				"#ts": "timestamp",
+				"#ts":    "timestamp",
+				"#owner": "owner",
 			},
 			ExpressionAttributeValues: map[string]types.AttributeValue{
+				":owner":      &types.AttributeValueMemberS{Value: dc.OwnerName},
 				":timestamp":  &types.AttributeValueMemberN{Value: fmt.Sprintf("%d", time.Now().Unix())},
 				":isReleased": &types.AttributeValueMemberBOOL{Value: true},
 			},
+			ConditionExpression: aws.String("#owner = :owner"),
 		}
 		_, err = dc.DynamoDB.UpdateItem(ctx, updateInput)
 		if err != nil {
@@ -131,6 +119,14 @@ func (dc *DribbleClient) DeleteOnReleaseLock(ctx context.Context, lockName strin
 		Key: map[string]types.AttributeValue{
 			"key": &types.AttributeValueMemberS{Value: lockName},
 		},
+		ExpressionAttributeNames: map[string]string{
+			"#owner": "owner",
+		},
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":owner":  &types.AttributeValueMemberS{Value: dc.OwnerName},
+			":delete": &types.AttributeValueMemberBOOL{Value: true},
+		},
+		ConditionExpression: aws.String("deleteOnRelease = :delete and #owner = :owner"),
 	}
 
 	_, err := dc.DynamoDB.DeleteItem(ctx, deleteInput)
@@ -165,4 +161,35 @@ func (dc *DribbleClient) CheckLock(ctx context.Context, lockName string) (bool, 
 	}
 
 	return lockItem.IsReleased, string(lockItem.Data), nil
+}
+
+func (dc *DribbleClient) validateLock(ctx context.Context, pKey string) error {
+	query := &dynamodb.QueryInput{
+		TableName:              aws.String(dc.TableName),
+		KeyConditionExpression: aws.String("key = :pKey"),
+		ExpressionAttributeValues: map[string]types.AttributeValue{
+			":pKey": &types.AttributeValueMemberS{Value: pKey},
+		},
+	}
+
+	q, err := dc.DynamoDB.Query(ctx, query)
+	if err != nil {
+		log.Printf("failed to query: %v", err)
+		return err
+	}
+
+	var locks []*utils.LockDto
+	err = attributevalue.UnmarshalListOfMaps(q.Items, &locks)
+	if err != nil {
+		log.Printf("failed to unmarshal locks: %v", err)
+		return err
+	}
+
+	for _, lock := range locks {
+		if lock.Owner != dc.OwnerName && !lock.IsReleased {
+			return errors.New("lock is in use by another and not released")
+		}
+	}
+
+	return nil
 }
