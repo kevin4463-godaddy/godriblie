@@ -21,15 +21,15 @@ func (dc *DribbleClient) AcquireLock(ctx context.Context, pKey string, opts ...A
 		return nil, err
 	}
 
-	lockReq := &acquireLockOptions{
+	lockOptions := &acquireLockOptions{
 		PartitionKey: pKey,
 	}
 
 	for _, opt := range opts {
-		opt(lockReq)
+		opt(lockOptions)
 	}
 
-	return dc.acquireLock(ctx, lockReq)
+	return dc.acquireLock(ctx, lockOptions)
 }
 
 func (dc *DribbleClient) acquireLock(ctx context.Context, opt *acquireLockOptions) (*utils.LockDto, error) {
