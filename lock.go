@@ -64,14 +64,8 @@ func (dc *DribbleClient) upsertNewLock(ctx context.Context,
 	}
 
 	// log something here
-	return dc.putLockItem(ctx, key, req)
-}
 
-func (dc *DribbleClient) putLockItem(ctx context.Context,
-	key string,
-	putItemRequest *dynamodb.PutItemInput) (*utils.LockDto, error) {
-
-	_, err := dc.DynamoDB.PutItem(ctx, putItemRequest)
+	_, err := dc.DynamoDB.PutItem(ctx, req)
 	if err != nil {
 		return nil, err
 	}

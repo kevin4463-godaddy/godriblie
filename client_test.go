@@ -2,36 +2,58 @@ package godriblie_test
 
 import (
 	"context"
-	"fmt"
-	"net"
-	"os"
-	"testing"
-	"time"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/kevin4463-godaddy/godriblie"
+	"github.com/kevin4463-godaddy/godriblie/internal/mocks"
+	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/suite"
+	"testing"
 )
 
-func TestMain(m *testing.M) {
-	for i := 0; i < 10; i++ {
-		c, err := net.Dial("tcp", "localhost:8000")
-		if err != nil {
-			time.Sleep(1 * time.Second)
-			fmt.Println("retry connection check")
-			continue
-		}
-		_ = c.Close()
-		break
-	}
-	time.Sleep(1 * time.Second)
-	exitCode := m.Run()
-	os.Exit(exitCode)
+type client_UnitTestSuite struct {
+	suite.Suite
+
+	client           *godriblie.DribbleClient
+	mockDynamoDb     *mocks.DynamoDbProvider
+	mockContext      context.Context
+	defaultTableName string
 }
 
+func Test_client_UnitTestSuite(t *testing.T) {
+	suite.Run(t, &client_UnitTestSuite{})
+}
+
+func (suite *client_UnitTestSuite) SetupTest() {
+	suite.defaultTableName = "mock_lock_table"
+}
+
+func (suite *client_UnitTestSuite) setupMocks() {
+	suite.mockDynamoDb = mocks.NewDynamoDbProvider(suite.T())
+	suite.mockContext = context.TODO()
+	suite.client = godriblie.NewLockClient(suite.mockDynamoDb, suite.defaultTableName,
+		godriblie.WithOwnerName("mock_owner"))
+}
+
+func (suite *client_UnitTestSuite) Test_AcquireLock_Success() {
+	suite.setupMocks()
+
+	suite.mockDynamoDb.EXPECT().
+		PutItem(suite.mockContext, mock.Anything).
+		Return(&dynamodb.PutItemOutput{
+			Attributes: map[string]types.AttributeValue{
+				"key": &types.AttributeValueMemberS{Value: "test_key_value"},
+			},
+		}, nil)
+
+	pkey := "test_key_value"
+
+	o, err := suite.client.AcquireLock(suite.mockContext, pkey, godriblie.WithDeleteLockOnRelease())
+	suite.Nil(err)
+	suite.Equal(pkey, o.PartitionKey)
+}
+
+/*
 func defaultConfig(t *testing.T) aws.Config {
 	t.Helper()
 	cfg, err := config.LoadDefaultConfig(context.TODO(),
@@ -53,44 +75,4 @@ func defaultConfig(t *testing.T) aws.Config {
 	}
 
 	return cfg
-}
-
-func TestClientBasicFlow(t *testing.T) {
-	t.Parallel()
-	svc := dynamodb.NewFromConfig(defaultConfig(t))
-
-	clt := godriblie.NewLockClient(
-		svc,
-		"locks_local",
-		godriblie.WithOwnerName("local_macos_owner"),
-		godriblie.WithPartitionKeyName("key"),
-	)
-
-	t.Cleanup(func() {
-		t.Log("clean up")
-	})
-
-	_, _ = clt.CreateTable(context.Background(),
-		"locks_local",
-		godriblie.WithProvisionedThroughput(&types.ProvisionedThroughput{
-			ReadCapacityUnits:  aws.Int64(5),
-			WriteCapacityUnits: aws.Int64(5),
-		}),
-		godriblie.WithCustomPartitionKeyName("key"))
-
-	data := `"im": { "a": "little-teapot" }`
-	err := clt.AcquireLock(context.Background(),
-		"spookyMonster",
-		false,
-		data)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	ok, lk, err := clt.CheckLock(context.Background(), "spookyMonster")
-	if err != nil {
-		t.Log(err)
-	}
-
-	t.Log(ok, lk)
-}
+}*/
