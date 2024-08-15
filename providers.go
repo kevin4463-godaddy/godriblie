@@ -14,5 +14,4 @@ type DynamoDbProvider interface {
 	CreateTable(ctx context.Context, params *dynamodb.CreateTableInput, optFns ...func(*dynamodb.Options)) (*dynamodb.CreateTableOutput, error)
 	ExecuteStatement(ctx context.Context, params *dynamodb.ExecuteStatementInput, optFns ...func(*dynamodb.Options)) (*dynamodb.ExecuteStatementOutput, error)
 	Query(ctx context.Context, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) (*dynamodb.QueryOutput, error)
-	NewQueryPaginator(client dynamodb.Client, params *dynamodb.QueryInput, optFns ...func(*dynamodb.Options)) *dynamodb.QueryPaginator
 }
