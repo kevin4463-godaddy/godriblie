@@ -166,7 +166,10 @@ func (dc *DribbleClient) CheckLock(ctx context.Context, lockName string) (bool, 
 func (dc *DribbleClient) validateLock(ctx context.Context, pKey string) error {
 	query := &dynamodb.QueryInput{
 		TableName:              aws.String(dc.TableName),
-		KeyConditionExpression: aws.String("key = :pKey"),
+		KeyConditionExpression: aws.String("#key = :pKey"),
+		ExpressionAttributeNames: map[string]string{
+			"#key": "key",
+		},
 		ExpressionAttributeValues: map[string]types.AttributeValue{
 			":pKey": &types.AttributeValueMemberS{Value: pKey},
 		},
