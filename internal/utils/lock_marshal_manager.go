@@ -2,9 +2,9 @@ package utils
 
 import (
 	"fmt"
-	"strconv"
-
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
+	"log"
+	"strconv"
 )
 
 func MarshalLockItem(item LockDto) (map[string]types.AttributeValue, error) {
@@ -21,15 +21,25 @@ func MarshalLockItem(item LockDto) (map[string]types.AttributeValue, error) {
 	return av, nil
 }
 
+func UnmarshalLockItemList(items []map[string]types.AttributeValue) ([]LockDto, error) {
+	var locks []LockDto
+
+	for _, item := range items {
+		l, err := UnmarshalLockItem(item)
+		if err != nil {
+			log.Printf("Error unmarshalling lock items: %v", err)
+			continue
+		}
+
+		locks = append(locks, l)
+	}
+
+	return locks, nil
+}
+
 func UnmarshalLockItem(item map[string]types.AttributeValue) (LockDto, error) {
-	timestamp, err := strconv.ParseInt(item["timestamp"].(*types.AttributeValueMemberN).Value, 10, 64)
-	if err != nil {
-		return LockDto{}, err
-	}
-	expTime, err := strconv.ParseInt(item["expTime"].(*types.AttributeValueMemberN).Value, 10, 64)
-	if err != nil {
-		return LockDto{}, err
-	}
+	timestamp, _ := strconv.ParseInt(item["timestamp"].(*types.AttributeValueMemberN).Value, 10, 64)
+	expTime, _ := strconv.ParseInt(item["expTime"].(*types.AttributeValueMemberN).Value, 10, 64)
 	deleteOnRelease := item["deleteOnRelease"].(*types.AttributeValueMemberBOOL).Value
 	isReleased := item["isReleased"].(*types.AttributeValueMemberBOOL).Value
 	data := item["data"].(*types.AttributeValueMemberS).Value

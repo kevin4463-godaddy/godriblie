@@ -1,11 +1,11 @@
 package utils
 
 type LockDto struct {
-	PartitionKey    string
-	Owner           string
-	Timestamp       int64
-	ExpTime         int64
-	DeleteOnRelease bool
-	IsReleased      bool
-	Data            []byte
+	PartitionKey    string `dynamodbav:"key"`
+	Owner           string `dynamodbav:"owner"`
+	Timestamp       int64  `dynamodbav:"timestamp"`
+	ExpTime         int64  `dynamodbav:"expTime"`
+	DeleteOnRelease bool   `dynamodbav:"deleteOnRelease"`
+	IsReleased      bool   `dynamodbav:"isReleased"`
+	Data            []byte `dynamodbav:"data"`
 }
